@@ -1,5 +1,5 @@
 CC := g++
-CFLAGS := -std=c++17 -Wall -Wextra
+CFLAGS := -std=c++17 -Wall -Wextra -Wno-cast-function-type
 INCLUDES := -I.
 LIBS := -lkernel32 -luser32
 DEFINES :=
