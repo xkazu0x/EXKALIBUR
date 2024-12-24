@@ -13,7 +13,7 @@ BUILD_DIR := bin
 
 SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 OBJS := $(SRCS:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
-EXEC := exkalibur.exe
+EXEC := excalibur.exe
 
 all: $(BUILD_DIR)/$(EXEC)
 

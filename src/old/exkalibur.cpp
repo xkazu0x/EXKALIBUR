@@ -135,7 +135,7 @@ struct EXWIN32 {
     XINPUTSETSTATE *xinput_set_state;
 };
 
-struct EXKALIBUR {
+struct EXMU {
     EXBOOL initialized;
     EXBOOL quit;
 
@@ -159,7 +159,7 @@ struct EXKALIBUR {
 };
 
 void
-EXPullWindow(EXKALIBUR *state) {
+EXPullWindow(EXMU *state) {
     state->window.resized = EX_FALSE;
     
     state->text_end = state->text_buffer;
@@ -197,7 +197,7 @@ EXPullWindow(EXKALIBUR *state) {
 }
 
 void
-EXPullTime(EXKALIBUR *state) {
+EXPullTime(EXMU *state) {
     LARGE_INTEGER large_integer;
     QueryPerformanceCounter(&large_integer);
     uint64_t current_ticks = large_integer.QuadPart;
@@ -243,7 +243,7 @@ EXPullStick(EXSTICK *stick, float x, float y) {
 }
 
 void
-EXPullKeys(EXKALIBUR *state) {
+EXPullKeys(EXMU *state) {
     BYTE keyboard_state[EX_MAX_KEYS];
     if (!GetKeyboardState(keyboard_state)) return;
     for (int key = 0; key < EX_MAX_KEYS; key++) {
@@ -252,7 +252,7 @@ EXPullKeys(EXKALIBUR *state) {
 }
 
 void
-EXPullMouse(EXKALIBUR *state) {
+EXPullMouse(EXMU *state) {
     POINT mouse_position;
     GetCursorPos(&mouse_position);
     
@@ -264,7 +264,7 @@ EXPullMouse(EXKALIBUR *state) {
 }
     
 void
-EXPullGamepad(EXKALIBUR *state) {
+EXPullGamepad(EXMU *state) {
     if (!state->win32.xinput_get_state) return;
 
     XINPUT_STATE xinput_state = {};
@@ -298,7 +298,7 @@ EXPullGamepad(EXKALIBUR *state) {
 }
 
 void
-EXPushGamepad(EXKALIBUR *state) {
+EXPushGamepad(EXMU *state) {
     uint16_t left_motor_speed = state->gamepad.left_motor_speed * UINT16_MAX;
     uint16_t right_motor_speed = state->gamepad.right_motor_speed * UINT16_MAX;
     
@@ -309,20 +309,20 @@ EXPushGamepad(EXKALIBUR *state) {
 }
 
 void
-EXExitWithError(EXKALIBUR *state) {
-    MessageBoxA(0, state->error, "EXKALIBUR ERROR", MB_ICONERROR | MB_OK);
+EXExitWithError(EXMU *state) {
+    MessageBoxA(0, state->error, "EXMU ERROR", MB_ICONERROR | MB_OK);
     ExitProcess(0);
 }
 
 void
-EXWarn(EXKALIBUR *state) {
-    MessageBoxA(0, state->warn, "EXKALIBUR WARN", MB_ICONWARNING | MB_OK);
+EXWarn(EXMU *state) {
+    MessageBoxA(0, state->warn, "EXMU WARN", MB_ICONWARNING | MB_OK);
 }
 
 EXBOOL
-EXPull(EXKALIBUR *state) {
+EXPull(EXMU *state) {
     if (!state->initialized) {
-        if (!state->error) state->error = "EXKALIBUR was not initialized.";
+        if (!state->error) state->error = "EXMU was not initialized.";
         EXExitWithError(state);
         return EX_FALSE;
     }    
@@ -335,9 +335,9 @@ EXPull(EXKALIBUR *state) {
 }
 
 EXBOOL
-EXPush(EXKALIBUR *state) {
+EXPush(EXMU *state) {
     if (!state->initialized) {
-        if (!state->error) state->error = "EXKALIBUR was not initialized.";
+        if (!state->error) state->error = "EXMU was not initialized.";
         EXExitWithError(state);
         return EX_FALSE;
     }
@@ -346,7 +346,7 @@ EXPush(EXKALIBUR *state) {
 }
 
 void
-EXUpdate(EXKALIBUR *state) {
+EXUpdate(EXMU *state) {
     EXPush(state);
     EXPull(state);
 }
@@ -354,7 +354,7 @@ EXUpdate(EXKALIBUR *state) {
 LRESULT CALLBACK
 EXWindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
     LRESULT result = 0;
-    EXKALIBUR *state = (EXKALIBUR*)GetWindowLongPtrA(window, GWLP_USERDATA);
+    EXMU *state = (EXMU*)GetWindowLongPtrA(window, GWLP_USERDATA);
     switch (message) {
     case WM_INPUT: {
         UINT size;
@@ -419,7 +419,7 @@ EXWindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
 }
 
 void CALLBACK
-EXMessageFiberProc(EXKALIBUR *state) {
+EXMessageFiberProc(EXMU *state) {
     //SetTimer(state->win32.window, 0, 1, 0);
     for (;;) {
         MSG message;
@@ -432,8 +432,8 @@ EXMessageFiberProc(EXKALIBUR *state) {
 }
 
 EXBOOL
-EXWindowInitialize(EXKALIBUR *state) {
-    if (!state->window.title) state->window.title = "EXKALIBUR";
+EXWindowInitialize(EXMU *state) {
+    if (!state->window.title) state->window.title = "EXMU";
 
     int window_x;
     if (state->window.position.x) window_x = state->window.position.x;
@@ -470,14 +470,14 @@ EXWindowInitialize(EXKALIBUR *state) {
     
     WNDCLASSA window_class = {};
     window_class.lpfnWndProc = EXWindowProc;
-    window_class.lpszClassName = "EXKALIBUR";
+    window_class.lpszClassName = "EXMU";
     window_class.style = CS_HREDRAW | CS_VREDRAW;
     if (RegisterClassA(&window_class) == 0) {
         state->error = "Failed to register window class.";
         return EX_FALSE;
     }
 
-    state->win32.window = CreateWindow("EXKALIBUR", state->window.title, WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+    state->win32.window = CreateWindow("EXMU", state->window.title, WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                                        window_x, window_y, window_width, window_height,
                                        0, 0, 0, 0);
     if (!state->win32.window) {
@@ -490,7 +490,7 @@ EXWindowInitialize(EXKALIBUR *state) {
 }
 
 EXBOOL
-EXTimeInitialize(EXKALIBUR *state) {
+EXTimeInitialize(EXMU *state) {
     LARGE_INTEGER large_integer;
     QueryPerformanceFrequency(&large_integer);
     state->time.ticks_per_second = large_integer.QuadPart;
@@ -500,7 +500,7 @@ EXTimeInitialize(EXKALIBUR *state) {
 }
 
 EXBOOL
-EXMouseInitialize(EXKALIBUR *state) {
+EXMouseInitialize(EXMU *state) {
     RAWINPUTDEVICE raw_input_device = {};
     raw_input_device.usUsagePage = 0x01;
     raw_input_device.usUsage = 0x02;
@@ -513,7 +513,7 @@ EXMouseInitialize(EXKALIBUR *state) {
 }
 
 EXBOOL
-EXGamepadInitialize(EXKALIBUR *state) {    
+EXGamepadInitialize(EXMU *state) {    
     state->win32.xinput_get_state = xinput_get_state_;
     state->win32.xinput_set_state = xinput_set_state_;
     
@@ -535,7 +535,7 @@ EXGamepadInitialize(EXKALIBUR *state) {
 }
 
 EXBOOL
-EXInitialize(EXKALIBUR *state) {
+EXInitialize(EXMU *state) {
     if (!EXWindowInitialize(state)) return EX_FALSE;
     if (!EXTimeInitialize(state)) return EX_FALSE;
     if (!EXMouseInitialize(state)) return EX_FALSE;
@@ -556,68 +556,68 @@ EXPrint(const char *format, ...) {
     printf(buffer);
 }
 
-EXKALIBUR platform;
+EXMU exmu;
 
 int main() {
-    platform.window.size.x = 1920 * 0.5;
-    platform.window.size.y = 1080 * 0.5;
-    EXInitialize(&platform);
-    while (!platform.quit) {
+    exmu.window.size.x = 1920 * 0.5;
+    exmu.window.size.y = 1080 * 0.5;
+    EXInitialize(&exmu);
+    while (!exmu.quit) {
 #if 0
         static double last_print_time = 0.0f;
-        if (platform.time.seconds - last_print_time > 0.1f) {
-            EXPrint("x: %d y: %d, dx: %d dy: %d\n", platform.window.position.x, platform.window.position.y, platform.window.size.x, platform.window.size.y);
-            EXPrint("delta_ticks: %llu, time_ticks: %llu\n", platform.time.delta_ticks, platform.time.ticks);
-            EXPrint("ns: %llu, us: %llu, ms: %llu\n", platform.time.nanoseconds, platform.time.microseconds, platform.time.milliseconds);
-            EXPrint("ds: %f, dns: %llu, dus: %llu, dms: %llu\n", platform.time.delta_seconds, platform.time.delta_nanoseconds, platform.time.delta_microseconds, platform.time.delta_milliseconds);
-            last_print_time = platform.time.seconds;
+        if (exmu.time.seconds - last_print_time > 0.1f) {
+            EXPrint("x: %d y: %d, dx: %d dy: %d\n", exmu.window.position.x, exmu.window.position.y, exmu.window.size.x, exmu.window.size.y);
+            EXPrint("delta_ticks: %llu, time_ticks: %llu\n", exmu.time.delta_ticks, exmu.time.ticks);
+            EXPrint("ns: %llu, us: %llu, ms: %llu\n", exmu.time.nanoseconds, exmu.time.microseconds, exmu.time.milliseconds);
+            EXPrint("ds: %f, dns: %llu, dus: %llu, dms: %llu\n", exmu.time.delta_seconds, exmu.time.delta_nanoseconds, exmu.time.delta_microseconds, exmu.time.delta_milliseconds);
+            last_print_time = exmu.time.seconds;
         }
 #endif
         
 #if 0
-        if (platform.text)
-            EXPrint("New text: %s\n", platform.text);
-        if (platform.keyboard.keys[EX_KEY_ESCAPE].pressed)
-            platform.quit = EX_TRUE;
-        if (platform.keyboard.keys[EX_KEY_CONTROL].pressed)
+        if (exmu.text)
+            EXPrint("New text: %s\n", exmu.text);
+        if (exmu.keyboard.keys[EX_KEY_ESCAPE].pressed)
+            exmu.quit = EX_TRUE;
+        if (exmu.keyboard.keys[EX_KEY_CONTROL].pressed)
             EXPrint("Control key pressed\n");
-        if (platform.keyboard.keys[EX_KEY_CONTROL].released)
+        if (exmu.keyboard.keys[EX_KEY_CONTROL].released)
             EXPrint("Control key released\n");
 #endif
         
 #if 0
-        if (platform.mouse.left_button.pressed) EXPrint("LMB pressed: %d, %d\n", platform.mouse.position.x, platform.mouse.position.y);
-        if (platform.mouse.left_button.released) EXPrint("LMB released.\n");
-        if (platform.mouse.right_button.pressed) EXPrint("RMB pressed.\n");
-        if (platform.mouse.right_button.released) EXPrint("RMB released.\n");
-        if (platform.mouse.delta_wheel) EXPrint("Wheel delta: %d\nWheel: %d\n", platform.mouse.delta_wheel, platform.mouse.wheel);
+        if (exmu.mouse.left_button.pressed) EXPrint("LMB pressed: %d, %d\n", exmu.mouse.position.x, exmu.mouse.position.y);
+        if (exmu.mouse.left_button.released) EXPrint("LMB released.\n");
+        if (exmu.mouse.right_button.pressed) EXPrint("RMB pressed.\n");
+        if (exmu.mouse.right_button.released) EXPrint("RMB released.\n");
+        if (exmu.mouse.delta_wheel) EXPrint("Wheel delta: %d\nWheel: %d\n", exmu.mouse.delta_wheel, exmu.mouse.wheel);
 #endif
         
-#if 1
-        if (platform.gamepad.left_shoulder_button.pressed) EXPrint("Left shoulder button pressed.\n");
-        if (platform.gamepad.left_shoulder_button.released) EXPrint("Left shoulder button released.\n");
-        if (platform.gamepad.right_shoulder_button.pressed) EXPrint("Right shoulder button pressed.\n");
-        if (platform.gamepad.right_shoulder_button.released) EXPrint("Right shoulder button released.\n");        
-        if (platform.gamepad.a_button.pressed) EXPrint("A button pressed.\n");
-        if (platform.gamepad.a_button.released) EXPrint("A button released.\n");
-        if (platform.gamepad.b_button.pressed) EXPrint("B button pressed.\n");
-        if (platform.gamepad.b_button.released) EXPrint("B button released.\n");
-        if (platform.gamepad.x_button.pressed) EXPrint("X button pressed.\n");
-        if (platform.gamepad.x_button.released) EXPrint("X button released.\n");
-        if (platform.gamepad.y_button.pressed) EXPrint("Y button pressed.\n");
-        if (platform.gamepad.y_button.released) EXPrint("Y button released.\n");
-        if (platform.gamepad.left_trigger.pressed) EXPrint("Left trigger pressed.\n");
-        if (platform.gamepad.left_trigger.released) EXPrint("Left trigger released.\n");
-        if (platform.gamepad.right_trigger.pressed) EXPrint("Right trigger pressed.\n");
-        if (platform.gamepad.right_trigger.released) EXPrint("Right trigger released.\n");
-        if (platform.gamepad.left_thumb_stick.x) EXPrint("Left thumbstick x: %f\n", platform.gamepad.left_thumb_stick.x);
-        if (platform.gamepad.left_thumb_stick.y) EXPrint("Left thumbstick y: %f\n", platform.gamepad.left_thumb_stick.y);
+#if 0
+        if (exmu.gamepad.left_shoulder_button.pressed) EXPrint("Left shoulder button pressed.\n");
+        if (exmu.gamepad.left_shoulder_button.released) EXPrint("Left shoulder button released.\n");
+        if (exmu.gamepad.right_shoulder_button.pressed) EXPrint("Right shoulder button pressed.\n");
+        if (exmu.gamepad.right_shoulder_button.released) EXPrint("Right shoulder button released.\n");        
+        if (exmu.gamepad.a_button.pressed) EXPrint("A button pressed.\n");
+        if (exmu.gamepad.a_button.released) EXPrint("A button released.\n");
+        if (exmu.gamepad.b_button.pressed) EXPrint("B button pressed.\n");
+        if (exmu.gamepad.b_button.released) EXPrint("B button released.\n");
+        if (exmu.gamepad.x_button.pressed) EXPrint("X button pressed.\n");
+        if (exmu.gamepad.x_button.released) EXPrint("X button released.\n");
+        if (exmu.gamepad.y_button.pressed) EXPrint("Y button pressed.\n");
+        if (exmu.gamepad.y_button.released) EXPrint("Y button released.\n");
+        if (exmu.gamepad.left_trigger.pressed) EXPrint("Left trigger pressed.\n");
+        if (exmu.gamepad.left_trigger.released) EXPrint("Left trigger released.\n");
+        if (exmu.gamepad.right_trigger.pressed) EXPrint("Right trigger pressed.\n");
+        if (exmu.gamepad.right_trigger.released) EXPrint("Right trigger released.\n");
+        if (exmu.gamepad.left_thumb_stick.x) EXPrint("Left thumbstick x: %f\n", exmu.gamepad.left_thumb_stick.x);
+        if (exmu.gamepad.left_thumb_stick.y) EXPrint("Left thumbstick y: %f\n", exmu.gamepad.left_thumb_stick.y);
 
-        //platform.gamepad.left_motor_speed = 0.5f;
-        //platform.gamepad.right_motor_speed = 0.5f;
+        //exmu.gamepad.left_motor_speed = 0.5f;
+        //exmu.gamepad.right_motor_speed = 0.5f;
 #endif
-        //if (platform.window.resized) EXPrint("Window resized.\n");
-        EXUpdate(&platform);
+        //if (exmu.window.resized) EXPrint("Window resized.\n");
+        EXUpdate(&exmu);
     }
     return 0;
 }
