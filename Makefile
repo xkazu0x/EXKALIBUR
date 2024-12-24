@@ -1,7 +1,7 @@
 CC := g++
 CFLAGS := -std=c++17 -Wall -Wextra -Wno-cast-function-type -Wno-unused-parameter
 INCLUDES := -I.
-LIBS := -lkernel32 -luser32
+LIBS := -lkernel32 -luser32 -lgdi32 -lopengl32
 DEFINES := -D_DEBUG
 
 MKDIR := mkdir

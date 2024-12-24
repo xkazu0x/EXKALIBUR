@@ -108,7 +108,10 @@ struct EXWINDOW {
     EXINT2 position;
     EXINT2 size;
     EXBOOL resized;
+    EXBOOL centered;
 };
+
+typedef void *HANDLE;
 
 typedef struct _XINPUT_STATE XINPUT_STATE;
 typedef struct _XINPUT_VIBRATION XINPUT_VIBRATION;
@@ -119,11 +122,16 @@ typedef X_INPUT_GET_STATE(XINPUTGETSTATE);
 typedef X_INPUT_SET_STATE(XINPUTSETSTATE);
 
 struct EXWIN32 {
-    void *window;
+    HANDLE window;
+    HANDLE device_context;
+    
     void *main_fiber;
     void *message_fiber;
+    
     XINPUTGETSTATE *xinput_get_state;
     XINPUTSETSTATE *xinput_set_state;
+
+    HANDLE wgl_context;
 };
 
 struct EXMU {

@@ -189,6 +189,11 @@ EXMU_gamepad_push(EXMU *state) {
     state->win32.xinput_set_state(0, &xinput_vibration);
 }
 
+void
+EXMU_opengl_push(EXMU *state) {
+    SwapBuffers(state->win32.device_context);
+}
+
 EXBOOL
 EXMU_push(EXMU *state) {
     if (!state->initialized) {
@@ -197,6 +202,7 @@ EXMU_push(EXMU *state) {
         return EX_FALSE;
     }
     EXMU_gamepad_push(state);
+    EXMU_opengl_push(state);
     return !state->quit;
 }
 
@@ -283,7 +289,7 @@ EXMU_win32_message_fiber_proc(EXMU *state) {
 EXBOOL
 EXMU_window_initialize(EXMU *state) {
     if (!state->window.title) state->window.title = "EXMU";
-
+    
     int window_x;
     if (state->window.position.x) window_x = state->window.position.x;
     else window_x = CW_USEDEFAULT;
@@ -300,7 +306,7 @@ EXMU_window_initialize(EXMU *state) {
     if (state->window.size.y) window_height = state->window.size.y;
     else window_height = CW_USEDEFAULT;
 
-    if (window_width != CW_USEDEFAULT && window_height != CW_USEDEFAULT) {
+    if (window_width != CW_USEDEFAULT && window_height != CW_USEDEFAULT) {        
         RECT window_rectangle;
         window_rectangle.left = 0;
         window_rectangle.right = window_width;
@@ -309,6 +315,11 @@ EXMU_window_initialize(EXMU *state) {
         if (AdjustWindowRect(&window_rectangle, WS_OVERLAPPEDWINDOW, 0)) {
             window_width = window_rectangle.right - window_rectangle.left;
             window_height = window_rectangle.bottom - window_rectangle.top;
+        }
+
+        if (state->window.centered) {
+            window_x = (GetSystemMetrics(SM_CXSCREEN) - window_width) / 2;
+            window_y = (GetSystemMetrics(SM_CYSCREEN) - window_height) / 2;
         }
     }
 
@@ -326,15 +337,15 @@ EXMU_window_initialize(EXMU *state) {
         return EX_FALSE;
     }
 
-    state->win32.window = CreateWindow("EXMU", state->window.title, WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                                       window_x, window_y, window_width, window_height,
-                                       0, 0, 0, 0);
+    state->win32.window = CreateWindow("EXMU", state->window.title, WS_OVERLAPPEDWINDOW, window_x, window_y, window_width, window_height, 0, 0, 0, 0);
     if (!state->win32.window) {
         state->error = "Failed to create win32 window.";
         return EX_FALSE;
     }
 
     SetWindowLongPtr(state->win32.window, GWLP_USERDATA, (LONG_PTR)state);
+    ShowWindow(state->win32.window, SW_SHOW);
+    state->win32.device_context = GetDC(state->win32.window);
     return EX_TRUE;
 }
 
@@ -381,11 +392,40 @@ EXMU_gamepad_initialize(EXMU *state) {
 }
 
 EXBOOL
+EXMU_opengl_initialize(EXMU *state) {
+    PIXELFORMATDESCRIPTOR pixel_format_descriptor;
+    pixel_format_descriptor.nSize = sizeof(pixel_format_descriptor);
+    pixel_format_descriptor.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER;
+    pixel_format_descriptor.iPixelType = PFD_TYPE_RGBA;
+    pixel_format_descriptor.cColorBits = 24;
+    pixel_format_descriptor.cAlphaBits = 0;
+    pixel_format_descriptor.cDepthBits = 24;
+    pixel_format_descriptor.cStencilBits = 8;
+    int pixel_format = ChoosePixelFormat(state->win32.device_context, &pixel_format_descriptor);
+    if (!pixel_format) {
+        return EX_FALSE;
+    }    
+    if (!DescribePixelFormat(state->win32.device_context, pixel_format, sizeof(pixel_format_descriptor), &pixel_format_descriptor)) {
+        return EX_FALSE;
+    }
+    if (!SetPixelFormat(state->win32.device_context, pixel_format, &pixel_format_descriptor)) {
+        return EX_FALSE;
+    }
+    state->win32.wgl_context = wglCreateContext(state->win32.device_context);
+    if (!state->win32.wgl_context) {
+        return EX_FALSE;
+    }
+    wglMakeCurrent(state->win32.device_context, state->win32.wgl_context);
+    return EX_TRUE;
+}
+
+EXBOOL
 EXMU_initialize(EXMU *state) {
     if (!EXMU_window_initialize(state)) return EX_FALSE;
     if (!EXMU_time_initialize(state)) return EX_FALSE;
     if (!EXMU_mouse_initialize(state)) return EX_FALSE;
     if (!EXMU_gamepad_initialize(state)) return EX_FALSE;
+    if (!EXMU_opengl_initialize(state)) return EX_FALSE;
     
     state->initialized = EX_TRUE;
     EXMU_pull(state);
